@@ -1,6 +1,8 @@
 import { Component } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { ReactiveFormsModule } from '@angular/forms';
+import { AuthServiceService } from 'src/app/services/auth.service';
+import { HttpClient } from '@angular/common/http';
 
 @Component({
   selector: 'app-login',
@@ -11,19 +13,38 @@ export class LoginComponent {
   loginForm: FormGroup;
   submitted = false;
 
-  constructor(private formBuilder: FormBuilder) {
-    this.loginForm = this.formBuilder.group({
+  constructor(private fb: FormBuilder, private authService: AuthServiceService) {
+    this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(6)]]
+      password: ['', [Validators.required, Validators.minLength(6)]],
+      check: [false]
     });
   }
 
-  onSubmit() {
-    this.submitted = true;
+  ngOnInit() {
+    this.initForm()
+  }
 
+  initForm() {
+    this.loginForm = new FormGroup({
+      email: new FormControl('', [Validators.required, Validators.email]),
+      password: new FormControl('', [Validators.required, Validators.minLength(8)])
+    })
+  }
+
+  onSubmit() {
     if (this.loginForm.valid) {
-      // Handle login logic here
-      console.log('Login successful', this.loginForm.value);
-    }
+      this.authService.login(this.loginForm.value).subscribe(res => {
+          console.log(res);
+          localStorage.setItem('token', res.token);
+
+          setTimeout(() => {
+            window.location.href = '/dashboard'
+          }, 2000)
+  }, error => {
+    // Handle observable error (e.g., network issue, server error)
+   console.log(error)
+  });
+}
   }
 }

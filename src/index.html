@@ -12,5 +12,78 @@
 </head>
 <body>
   <app-root></app-root>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+  <script type="text/javascript">
+      const URL = "https://teachablemachine.withgoogle.com/models/C4gER0go-/";
+
+      let model, webcam, labelContainer, maxPredictions, isPaused = false;
+
+      async function init() {
+          const modelURL = URL + "model.json";
+          const metadataURL = URL + "metadata.json";
+
+          model = await tmImage.load(modelURL, metadataURL);
+          maxPredictions = model.getTotalClasses();
+
+          const flip = true;
+          webcam = new tmImage.Webcam(200, 200, flip);
+          await webcam.setup();
+          await webcam.play();
+          window.requestAnimationFrame(loop);
+
+          document.getElementById("webcam-container").appendChild(webcam.canvas);
+          labelContainer = document.getElementById("label-container");
+          for (let i = 0; i < maxPredictions; i++) {
+              labelContainer.appendChild(document.createElement("div"));
+          }
+
+          document.getElementById("start-button").style.display = 'none';
+      }
+
+      async function loop() {
+          if (!isPaused) {
+              webcam.update();
+              await predict();
+              window.requestAnimationFrame(loop);
+          }
+      }
+
+      async function predict() {
+          const prediction = await model.predict(webcam.canvas);
+          let highestPrediction = { className: "", probability: 0 };
+
+          for (let i = 0; i < maxPredictions; i++) {
+              if (prediction[i].probability > highestPrediction.probability) {
+                  highestPrediction = prediction[i];
+              }
+          }
+
+          if (highestPrediction.probability > 0.9 && highestPrediction.className !== "idle") {
+              isPaused = true;
+              document.getElementById("label-container").innerHTML = `
+                <h1>Looks like you scanned a ${highestPrediction.className}</h1>
+                <button class="see-more" onclick="navigateToDishes()">See Dishes</button>
+                <button class="see-more" onclick="scanAgain()">Scan Again</button>
+              `;
+          } else {
+            //   labelContainer.childNodes.forEach((node, index) => {
+            //       node.innerHTML = `${prediction[index].className}: ${prediction[index].probability.toFixed(2)}`;
+            //   });
+          }
+      }
+
+      function navigateToDishes() {
+          window.location.href = '/dishes';
+      }
+
+      function scanAgain() {
+          isPaused = false;
+          labelContainer.innerHTML = "";
+          window.requestAnimationFrame(loop);
+      }
+  </script>
+
 </body>
 </html>
